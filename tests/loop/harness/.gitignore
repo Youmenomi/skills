@@ -1,0 +1,5 @@
+STOP
+.loop.lock
+.loop-round.pid
+.loop-main.json
+logs/
