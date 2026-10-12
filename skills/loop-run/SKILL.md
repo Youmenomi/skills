@@ -28,9 +28,9 @@ description: 在已初始化（/loop-init）的 repo 啟動或接續自動開發
 # 每一輪
 
 1. 寫 `.loop-main.json`：`{"sessionId":"<self>","updatedAt":"<ISO>","round":<n>}`。
-2. 挑角色（純字串比對，不做判斷）：
-   `grep -E '^### .* — OPEN — ' docs/progress/NEEDS-USER.md`（路徑依 repo 的指令檔，常見是 `docs/progress/NEEDS-USER.md`）
-   有 OPEN → `fable`；沒有 → `opus`。
+2. 挑角色（純字串比對，不做判斷）。各 repo 的項目標題格式不同（`### NU-001 … — OPEN — AUTH`、`## NU-003 … — OPEN · AUTH · blocks: …` 都有），所以只認「標題行裡有 OPEN」：
+   `grep -cE '^#{2,4} +NU-[0-9]+.*\bOPEN\b' docs/progress/NEEDS-USER.md`（路徑依 repo 的指令檔，常見是 `docs/progress/NEEDS-USER.md`）
+   結果 > 0 → `fable`；= 0 → `opus`。開場第一次先用 `grep -n 'OPEN'` 看一眼格式，確認上面的樣式有抓到該 repo 的項目行。
 3. 先把標題改成 `▶ loop <repo> · 第n輪 <role> 進行中`（見「側欄狀態」），再用 Bash **背景執行**：`bash scripts/harness/run-round.sh <role>`。然後結束這個 turn，只說一句「第 n 輪（<role>）進行中」。工作者結束時你會自動被叫醒；在那之前不要輪詢、不要 sleep。
 4. 被叫醒後，讀**最新一個** `logs/loop/*.summary`（一行）。需要細節時最多再讀該輪 `.json` 的 `.result` 前 20 行，**不要**把整個 JSON 讀進上下文。
 5. 以檔案為準再查一次狀態：再 grep 一次 OPEN；`git status --porcelain`；`ls STOP .loop.lock .loop-round.pid 2>/dev/null`。摘要說 CONTINUE 但 grep 到 OPEN，照 OPEN 處理。
