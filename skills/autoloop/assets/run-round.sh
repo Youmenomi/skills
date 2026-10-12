@@ -1,8 +1,7 @@
 #!/bin/bash
-# loop-version: @VERSION@
-# run-round.sh — start ONE loop round as an independent `claude -p` process.
-# Installed by /loop-init from ~/.claude/skills/loop-init/assets; /loop-run refuses to start
-# when this version, ~/.claude/loop/VERSION and the skills' own version differ.
+# autoloop run-round.sh — start ONE loop round as an independent `claude -p` process.
+# Lives in the installed skill (~/.claude/skills/autoloop/assets); repos call it through the
+# two-line stub scripts/harness/run-round.sh. Version: ../VERSION next to this file.
 #
 #   scripts/harness/run-round.sh <fable|opus> [--model ID] [--effort L] [--timeout SEC]
 #                                             [--budget USD] [--prompt FILE]
@@ -19,15 +18,16 @@
 #   - a .loop.lock left behind by a dead worker is removed
 #   - the worker's JSON goes to logs/loop/<ts>-<role>.json, a one-line summary next to it
 set -u
-ROOT=$(cd "$(dirname "$0")/../.." && pwd)
+LOOP_HOME=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)   # prompts and VERSION live here
+ROOT=${LOOP_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}
 cd "$ROOT" || exit 2
 
 ROLE=${1:-}; shift || true
 case "$ROLE" in
   # Models/efforts: override per repo with LOOP_MODEL_DECIDE / LOOP_MODEL_IMPLEMENT /
   # LOOP_EFFORT_DECIDE / LOOP_EFFORT_IMPLEMENT in .claude/settings.json "env".
-  fable) MODEL=${LOOP_MODEL_DECIDE:-claude-fable-5-1}; EFFORT=${LOOP_EFFORT_DECIDE:-high}; PROMPT="$HOME/.claude/loop/decide.md" ;;
-  opus)  MODEL=${LOOP_MODEL_IMPLEMENT:-claude-opus-5-5}; EFFORT=${LOOP_EFFORT_IMPLEMENT:-high}; PROMPT="$HOME/.claude/loop/implement.md" ;;
+  fable) MODEL=${LOOP_MODEL_DECIDE:-claude-fable-5-1}; EFFORT=${LOOP_EFFORT_DECIDE:-high}; PROMPT="$LOOP_HOME/decide.md" ;;
+  opus)  MODEL=${LOOP_MODEL_IMPLEMENT:-claude-opus-5-5}; EFFORT=${LOOP_EFFORT_IMPLEMENT:-high}; PROMPT="$LOOP_HOME/implement.md" ;;
   sweep) ;;  # cleanup only: kill leftovers under this repo, remove dead locks, start nothing
   *) echo "usage: run-round.sh <fable|opus|sweep> [--model ID] [--effort L] [--timeout SEC] [--budget USD] [--prompt FILE]" >&2; exit 2 ;;
 esac

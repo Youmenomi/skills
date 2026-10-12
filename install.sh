@@ -24,5 +24,8 @@ for d in "$SRC"/skills/*/; do
   cp -R "$d" "$DEST/$name"
   installed="$installed $name"
 done
+# Names this repo used to ship under; superseded by autoloop (1.x → 2.0.0).
+for old in loop-init loop-run; do [ -d "$DEST/$old" ] && { rm -rf "$DEST/$old"; echo "removed obsolete skill $old"; }; done
+[ -f "$HOME/.claude/loop/VERSION" ] && { rm -rf "$HOME/.claude/loop"; echo "removed obsolete runtime copy ~/.claude/loop"; }
 echo "installed:$installed → $DEST"
-echo "next: in each repo you want to automate, run /loop-init in Claude Code, then /loop-run."
+echo "next: in each repo you want to automate, run /autoloop init in Claude Code, then /autoloop run."

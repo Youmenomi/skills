@@ -16,37 +16,42 @@ npx skills add Youmenomi/skills -g
 git clone https://github.com/Youmenomi/skills.git && cd skills && ./install.sh
 ```
 
-兩種方式都會把 `skills/<name>/` 複製到 `~/.claude/skills/<name>/`。
+兩種方式都會把 `skills/<name>/` 複製到 `~/.claude/skills/<name>/`。更新就是再跑一次。
 
 ## 目前的 skill
 
-| skill | 用途 | 需要 |
-|---|---|---|
-| `loop-init` | 把一個 repo 準備成能自動開發的狀態：建 harness（指令檔、PLAN/STATUS/NEEDS-USER、驗收清單、子代理、settings）、裝執行器 `run-round.sh`。每個 repo 跑一次 | Claude Code 桌面 app 或 CLI；獨立 CLI 已登入 |
-| `loop-run` | 主 session 當迴圈：每輪開一個獨立的 `claude -p` 工作者（有待決項目開 Fable 決策輪，否則開 Opus 實作輪），清理、留一行摘要、再開下一輪；要人決定或上下文超標時通知並停 | 先在該 repo 跑過 `/loop-init` |
+### autoloop — 自動開發 loop
 
-兩個 loop skill 共用一個 `loop-version`（見 `skills/loop-init/assets/VERSION`），`loop-run` 開場會核對版本，不符就要求重跑 `/loop-init`。
+一個 skill 兩個子指令：
 
-## 前提與限制（loop）
+| 子指令 | 做什麼 |
+|---|---|
+| `/autoloop init` | 把 repo 準備好：新 repo 從零建 harness（指令檔、PLAN/STATUS/NEEDS-USER、驗收清單、子代理、settings）；已有 harness 的瘦身指令檔。再裝一支兩行的 stub `scripts/harness/run-round.sh`、允許規則與 ignore。每個 repo 做一次 |
+| `/autoloop run` | 本 session 當主迴圈：每輪開一個獨立的 `claude -p` 工作者（NEEDS-USER 有 OPEN 就開 Fable 決策輪，否則開 Opus 實作輪），清理、留一行摘要、再開下一輪；要人決定或上下文超標時推手機通知並停下 |
 
+所有執行檔（輪次啟動器、兩個 prompt、上下文計算、版本）都在 `skills/autoloop/assets/`，安裝後住在 `~/.claude/skills/autoloop/assets/`。repo 裡只有那支 stub，它把呼叫轉給安裝目錄，內容永遠不變，只帶一個 major 號；`/autoloop run` 開場比對 stub 的 major 和 skill 的 major，不符就要求重跑 `/autoloop init`。
+
+前提與限制：
 - macOS 或 Linux（原生 Windows 不支援，請用 WSL）；需要 `jq`、`lsof`、`perl`。
 - 工作者是獨立的 Claude Code CLI 程序，要另外安裝並登入：`curl -fsSL https://claude.ai/install.sh | bash`，然後執行 `claude` 登入。
-- 預設模型 Fable 5.1（決策）與 Opus 5.5（實作），沒有存取權時在 repo 的 `.claude/settings.json` `env` 用 `LOOP_MODEL_DECIDE`／`LOOP_MODEL_IMPLEMENT` 換。
-- 桌面 app 以外的環境少了標題、側欄藍點與手機推播，其餘相同（`loop-run` 內有降級規則）。
+- 預設模型 Fable 5.1（決策）與 Opus 5.5（實作），沒有存取權時在 repo 的 `.claude/settings.json` `env` 用 `LOOP_MODEL_DECIDE`／`LOOP_MODEL_IMPLEMENT` 換；逾時、預算、殘留程序名單、上下文視窗、通知指令也都是 `LOOP_*` 環境變數，見 SKILL.md。
+- 桌面 app 以外的環境少了標題、側欄藍點與手機推播，其餘相同（SKILL.md 內有降級規則）。
 
 ## 結構
 
 ```
 skills/<name>/SKILL.md      每個 skill 一個資料夾，assets/ 跟著 skill 走
-tests/<skill>/              測試床與情境清單（loop 的是一個迷你 harness）
-tools/check.sh              frontmatter 與版本一致性檢查
+tests/<skill>/              測試床與情境清單（autoloop 的是一個迷你 harness）
+changes/                    待發布的 change 檔（type: patch|minor|major）
+tools/check.sh              frontmatter、版本、change 檔檢查（CI 也跑它）
+tools/release.sh            升版、CHANGELOG、tag、fast-forward main
 install.sh                  複製到 ~/.claude/skills/
 ```
 
 ## 改動與升版
 
-- 日常改動在 `dev` 分支。改了 `skills/loop-init/` 或 `skills/loop-run/` 任何檔，就在 `changes/` 放一個 `<slug>.md`，檔頭 `type: patch|minor|major`，接一行說明（`tools/check.sh` 會要求）。只改文件、tests、tools 不需要。
-- 版本是 semver，單一來源 `skills/loop-init/assets/VERSION`：**patch** 修復、**minor** 功能、**major** 不相容（`run-round.sh` 變了，repo 裡的副本過期；`release.sh` 會強制）。
-- 發布：在 `dev` 跑 `tools/release.sh`，它取最高的 type 升版、合併 `changes/` 進 CHANGELOG、commit、打 tag `loop-vX.Y.Z`、fast-forward `main`；然後 `git push origin dev main --follow-tags`。發布前依 `tests/loop/CASES.md` 跑一遍測試床。**main 永遠是已發布狀態**，CI 會擋 main 上殘留的 change 檔。
-- 使用者更新：minor／patch 只要重新安裝（`/loop-run` 開場會自己同步 `~/.claude/loop/`）；major 要重新安裝並在每個 repo 重跑 `/loop-init`（`/loop-run` 比對 repo 副本的 major，不符就不啟動）。
+- 日常改動在 `dev` 分支。改了 `skills/` 任何檔，就在 `changes/` 放一個 `<slug>.md`，檔頭 `type: patch|minor|major`，接一行說明（`tools/check.sh` 會要求）。只改文件、tests、tools 不需要。
+- 版本是 semver，單一來源 `skills/autoloop/assets/VERSION`：**patch** 修復、**minor** 功能、**major** 不相容（stub 範本或對既有 repo 的流程變了，repo 要重跑 `/autoloop init`；`release.sh` 會強制）。
+- 發布：在 `dev` 跑 `tools/release.sh`，它取最高的 type 升版、合併 `changes/` 進 CHANGELOG、commit、打 tag `autoloop-vX.Y.Z`、fast-forward `main`；然後 `git push origin dev main --follow-tags`。發布前依 `tests/loop/CASES.md` 跑一遍測試床。**main 永遠是已發布狀態**，CI 會擋 main 上殘留的 change 檔。
+- 使用者更新：任何版本都只要重新安裝；major 另外在每個 repo 重跑 `/autoloop init`。
 - CI（GitHub Actions）每次 push 跑 `tools/check.sh`。
