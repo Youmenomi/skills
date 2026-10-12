@@ -1,5 +1,5 @@
 #!/bin/bash
-# loop-version: 1
+# loop-version: @VERSION@
 # run-round.sh — start ONE loop round as an independent `claude -p` process.
 # Installed by /loop-init from ~/.claude/skills/loop-init/assets; /loop-run refuses to start
 # when this version, ~/.claude/loop/VERSION and the skills' own version differ.

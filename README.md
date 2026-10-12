@@ -43,6 +43,9 @@ tools/check.sh              frontmatter 與版本一致性檢查
 install.sh                  複製到 ~/.claude/skills/
 ```
 
-## 升版
+## 改動與升版
 
-改了 `skills/loop-init/assets/` 任何一檔或兩個 loop skill 的流程：`assets/VERSION`、`assets/run-round.sh` 的 `# loop-version:`、兩個 SKILL.md 宣告的版本一起加 1，寫進 `CHANGELOG.md`，跑 `tools/check.sh`，再依 `tests/loop/CASES.md` 跑一遍測試床。使用者端更新後要在每個 repo 重跑 `/loop-init`。
+- 改了 `skills/loop-init/` 或 `skills/loop-run/` 任何檔：在 `changes/` 放一個一行的 `<slug>.md` 說明改了什麼（`tools/check.sh` 會要求）。
+- 發布：`tools/release.sh` 把 `changes/` 合併進 CHANGELOG、版本 +1（單一來源 `skills/loop-init/assets/VERSION`，同步到 `skills/loop-run/VERSION`）、commit、打 tag `loop-v<N>`；然後 `git push --follow-tags`。發布前依 `tests/loop/CASES.md` 跑一遍測試床。
+- `run-round.sh` 原版第二行是 `# loop-version: @VERSION@`，`/loop-init` 安裝時填入數字；`/loop-run` 開場核對 skill、`~/.claude/loop/`、repo 三處版本，不符就要求重跑 `/loop-init`。
+- CI（GitHub Actions）每次 push 跑 `tools/check.sh`。

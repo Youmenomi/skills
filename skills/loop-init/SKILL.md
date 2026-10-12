@@ -5,7 +5,7 @@ description: 把一個 repo 準備成能用 /loop-run 自動開發的狀態：�
 
 # 版本
 
-本 skill 是 **loop-version 1**，與 `assets/VERSION`、`loop-run`、`~/.claude/loop/VERSION`、repo 裡 `run-round.sh` 的 `# loop-version:` 行一致。升版規則：改了 assets 任何一檔或兩個 skill 的流程，就把這五處一起加 1；`loop-run` 看到任一處不符就不會啟動，所以更新 skill 後**一定要在每個 repo 重跑 `/loop-init`**，它負責把 `~/.claude/loop/` 和 repo 一起更新到同一版。
+loop-version 的單一來源是本 skill 的 `assets/VERSION`（安裝後是 `~/.claude/skills/loop-init/assets/VERSION`）。本 skill 負責把它帶到另外三處：`~/.claude/loop/VERSION`、`~/.claude/loop/run-round.sh` 與 repo 的 `scripts/harness/run-round.sh`（assets 原版的第二行是 `# loop-version: @VERSION@`，複製時用 `sed "s/@VERSION@/<數字>/"` 填入）。`loop-run` 的版本檔由 skills repo 的 release 腳本同步，本 skill 不碰。`loop-run` 看到任一處不符就不會啟動，所以更新 skill 後**一定要在每個 repo 重跑 `/loop-init`**。
 
 # 原則
 
@@ -14,7 +14,7 @@ description: 把一個 repo 準備成能用 /loop-run 自動開發的狀態：�
 # 開始前
 
 1. `git status --porcelain` 必須乾淨；不乾淨先問使用者，不 reset、stash、覆寫。
-2. 共用層 `~/.claude/loop/`（執行期讀的穩定路徑）由本 skill 維護：原版在本 skill 資料夾的 `assets/`（`run-round.sh`、`decide.md`、`implement.md`、`ctx-usage.sh`）。`~/.claude/loop/` 不存在就從 `assets/` 建立；已存在但和 `assets/` 不同就顯示 diff 問使用者要用哪一邊（使用者可能直接改了 `~/.claude/loop/` 的檔）。永遠不要自己重寫這四個檔的內容。
+2. 共用層 `~/.claude/loop/`（執行期讀的穩定路徑）由本 skill 維護：原版在本 skill 資料夾的 `assets/`（`VERSION`、`run-round.sh`、`decide.md`、`implement.md`、`ctx-usage.sh`）。`~/.claude/loop/` 不存在就從 `assets/` 建立（`run-round.sh` 要填入版本號，見「版本」）；已存在但版本或內容和 `assets/` 不同就顯示 diff 問使用者要用哪一邊（使用者可能直接改了 `~/.claude/loop/` 的檔）。永遠不要自己重寫這幾個檔的內容。
 3. 環境檢查：`uname` 是 Darwin 或 Linux（原生 Windows 不支援，請用 WSL）；`jq`、`lsof`、`perl` 都在 PATH（缺的給安裝指令，macOS 用 brew、Debian 系用 apt）。獨立 CLI 已安裝（預設 `~/.local/bin/claude`，可用 `CLAUDE_BIN` 指定；沒有就給 `curl -fsSL https://claude.ai/install.sh | bash`）且已登入：`claude auth status` 的 `loggedIn` 為 true。否則請使用者在終端機執行 `claude` 登入；憑證由使用者親自處理。
    可調參數都放 repo 的 `.claude/settings.json` 的 `env`，不碰全域設定：`LOOP_MODEL_DECIDE`／`LOOP_MODEL_IMPLEMENT`（預設 claude-fable-5-1／claude-opus-5-5）、`LOOP_EFFORT_DECIDE`／`LOOP_EFFORT_IMPLEMENT`（預設 high）、`LOOP_TIMEOUT`、`LOOP_BUDGET`、`LOOP_SWEEP_PATTERN`、`LOOP_CTX_WINDOW`（主 session 視窗 token 數，預設 Claude 5 系列 1M）、`LOOP_NOTIFY_CMD`（非桌面 app 環境的通知指令）。使用者沒有 Fable 或 Opus 的存取權時，請他在這裡換模型。
 4. 判斷模式：
@@ -53,7 +53,7 @@ description: 把一個 repo 準備成能用 /loop-run 自動開發的狀態：�
 
 # 裝執行器
 
-1. `mkdir -p scripts/harness && cp ~/.claude/loop/run-round.sh scripts/harness/run-round.sh && chmod +x`。路徑固定是 `scripts/harness/run-round.sh`，不管 repo 其他腳本放哪（`run-round.sh` 以自己的位置推算 repo 根目錄，`/loop-run` 也只認這個路徑）；已存在且不同就顯示 diff 問要不要覆蓋。
+1. `mkdir -p scripts/harness && cp ~/.claude/loop/run-round.sh scripts/harness/run-round.sh && chmod +x`（`~/.claude/loop/` 的那份已填好版本號；若第二行仍是 `@VERSION@`，用 `sed -i '' "s/@VERSION@/$(cat ~/.claude/loop/VERSION)/"` 填入）。路徑固定是 `scripts/harness/run-round.sh`，不管 repo 其他腳本放哪（`run-round.sh` 以自己的位置推算 repo 根目錄，`/loop-run` 也只認這個路徑）；已存在且不同就顯示 diff 問要不要覆蓋。
 2. `.gitignore` 確保有 `STOP`、`.loop.lock`、`.loop-round.pid`、`.loop-main.json`、`logs/`（沿用檔內既有的寫法，例如前導 `/`）。
 3. `.claude/settings.json`：`permissions.allow` 加 `"Bash(scripts/harness/run-round.sh *)"`；新 repo 另加 `"effortLevel": "high"`、deny `git push`、只預先允許明確列出的安全指令。已有內容就合併，不動其他鍵。
 4. 看 gates 用到的長駐程序是否在 `run-round.sh` 的 `SWEEP_PATTERN`（vite、node、npm、blender、cargo、playwright、chrom*、python、tail…）裡；不在就建議在 `env` 設 `LOOP_SWEEP_PATTERN`。用最近幾個切片記錄的實際耗時估 `LOOP_TIMEOUT`（最長一輪的兩倍；預設 5400 秒）與 `LOOP_BUDGET`（預設 20 美元）。

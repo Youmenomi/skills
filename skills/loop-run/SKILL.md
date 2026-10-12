@@ -13,12 +13,12 @@ description: 在已初始化（/loop-init）的 repo 啟動或接續自動開發
 
 # 版本
 
-本 skill 是 **loop-version 1**。整套（loop-init、loop-run、`~/.claude/loop/` 四個檔、repo 的 `run-round.sh`）共用一個版本號，任何一處改動都會一起升版。
+本 skill 的版本寫在**和本檔同目錄的 `VERSION` 檔**（安裝後是 `~/.claude/skills/loop-run/VERSION`），不寫在本文裡。整套（loop-init、loop-run、`~/.claude/loop/` 四個檔、repo 的 `run-round.sh`）共用一個 loop-version，由 skills repo 的 `tools/release.sh` 統一升版。
 
 # 開場（每次呼叫本 skill 都做一次）
 
-0. 版本核對，三個都必須是 1，否則**不啟動**，告訴使用者「版本不符，請先跑 `/loop-init` 更新」並結束：
-   `cat ~/.claude/loop/VERSION`；`grep -m1 'loop-version:' scripts/harness/run-round.sh`；本檔宣告的版本。
+0. 版本核對，三個數字必須相同，否則**不啟動**，告訴使用者「版本不符，請先跑 `/loop-init` 更新」並結束：
+   `cat ~/.claude/skills/loop-run/VERSION`（本 skill）；`cat ~/.claude/loop/VERSION`（共用層）；`grep -m1 'loop-version:' scripts/harness/run-round.sh`（repo）。任何一個讀不到也算不符。
 1. 確認在 repo 根目錄：有 `AGENTS.md` 或 `CLAUDE.md`，且 `scripts/harness/run-round.sh` 存在。缺任何一個 → 告訴使用者先跑 `/loop-init`，結束。
 2. 讀 `.loop-main.json`（可能不存在）。若 `sessionId` 不是自己（用 `get_session self` 取得）而且 `updatedAt` 在 **15 分鐘內** → 另一個主 session 可能還在跑。用 AskUserQuestion 問使用者要不要接手；要接手就 `touch STOP`、等 `.loop-round.pid` 消失（最多 40 分鐘，每 30 秒看一次）、`rm -f STOP`，再繼續；不接手就結束。
 3. `get_session self` 看模型與強度。不是 Sonnet 5.5 / medium 就記住：之後**每輪摘要**加一句「主 session 目前 <模型>/<強度>，建議 Sonnet 5.5 / medium，請在模型選單切換」。只提醒，不阻擋（session 不能改自己的模型）。
