@@ -1,5 +1,11 @@
 # Changelog
 
+## loop-version 1.1.0 — 2026-10-12 (minor)
+
+- (patch) loop-run：NEEDS-USER 的 OPEN 偵測改為不依賴標題格式（同時支援 `### … — OPEN — AUTH` 與 `## … — OPEN · AUTH · blocks:` 等寫法），避免在不同 repo 誤開實作輪
+- (minor) 版本改為 semver：loop-run 開場比對 skill 與共用層版本並自動同步 `~/.claude/loop/`，只對 repo 的 run-round.sh 比 major；minor／patch 發布後不再需要重跑 /loop-init
+
+
 ## loop-version 1.0.0 — 2026-10-12 (initial)
 
 第一版。`loop-init`（建 harness、裝執行器、瘦身指令檔、維護 `~/.claude/loop/`）與 `loop-run`（主 session 迴圈、Fable 決策輪／Opus 實作輪、通知與停止規則、版本核對）。
