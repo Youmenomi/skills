@@ -1,8 +1,7 @@
 #!/bin/bash
 # check.sh — run before committing and in CI.
 #   1. every skills/*/SKILL.md has frontmatter and name == directory
-#   2. autoloop version: semver X.Y.Z in skills/autoloop/assets/VERSION, stub template keeps
-#      '@MAJOR@', CHANGELOG has the section
+#   2. autoloop version: semver X.Y.Z in skills/autoloop/assets/VERSION, CHANGELOG has the section
 #   3. change files: every changes/*.md declares type; on main there must be none pending
 #      (main is always a released state); elsewhere a change under skills/ needs one
 #      (locally: working tree vs HEAD; in CI: CHECK_RANGE="<before>..HEAD")
@@ -22,7 +21,6 @@ A=skills/autoloop/assets
 V=$(cat $A/VERSION)
 echo "autoloop version: $V"
 echo "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "FAIL: $A/VERSION '$V' is not X.Y.Z"; fail=1; }
-grep -q 'autoloop stub (version @VERSION@)' $A/run-round-stub.sh || { echo "FAIL: $A/run-round-stub.sh must keep 'autoloop stub (version @VERSION@)'"; fail=1; }
 grep -q "^## autoloop $V " CHANGELOG.md || { echo "FAIL: CHANGELOG has no '## autoloop $V' section"; fail=1; }
 
 pending=$(ls changes/*.md 2>/dev/null | grep -v README || true)
@@ -47,5 +45,5 @@ elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   fi
 fi
 
-bash -n $A/run-round.sh && bash -n $A/run-round-stub.sh && bash -n $A/ctx-usage.sh && bash -n install.sh && bash -n tools/release.sh
+bash -n $A/run-round.sh && bash -n $A/ctx-usage.sh && bash -n install.sh && bash -n tools/release.sh
 [ "$fail" = 0 ] && echo "OK" || exit 1

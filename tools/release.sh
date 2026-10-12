@@ -3,8 +3,8 @@
 #
 #   changes/<slug>.md   frontmatter `type: patch|minor|major`, then one line for the CHANGELOG
 #   bump = highest type among pending files (semver: patch = fix, minor = feature, major = incompatible)
-#   every release needs /autoloop init in each repo: the stub carries the full version and
-#   /autoloop run requires an exact match.
+#   every release needs /autoloop init in each repo: .claude/autoloop.json carries the full
+#   version and /autoloop run requires an exact match.
 #
 # Run it on the dev branch with a clean tree. It bumps skills/autoloop/assets/VERSION, rewrites
 # CHANGELOG, removes the change files, commits, tags autoloop-v<X.Y.Z>, then fast-forwards main.
@@ -47,4 +47,4 @@ git commit -qm "autoloop $NEW" -m "$(for f in $pending; do echo "- $(basename "$
 git tag "autoloop-v$NEW"
 if [ "$BR" != main ]; then git checkout -q main && git merge -q --ff-only "$BR" && git checkout -q "$BR"; fi
 echo "released autoloop $NEW ($bump) → tag autoloop-v$NEW, main fast-forwarded."
-echo "next: git push origin $BR main --follow-tags; ./install.sh; then /autoloop init in every repo (stub must match $NEW exactly)"
+echo "next: git push origin $BR main --follow-tags; ./install.sh; then /autoloop init in every repo (.claude/autoloop.json must say $NEW)"
