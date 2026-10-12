@@ -29,7 +29,7 @@ git clone https://github.com/Youmenomi/skills.git && cd skills && ./install.sh
 | `/autoloop init` | 把 repo 準備好：新 repo 從零建 harness（指令檔、PLAN/STATUS/NEEDS-USER、驗收清單、子代理、settings）；已有 harness 的瘦身指令檔。再裝一支兩行的 stub `scripts/harness/run-round.sh`、允許規則與 ignore。每個 repo 做一次 |
 | `/autoloop run` | 本 session 當主迴圈：每輪開一個獨立的 `claude -p` 工作者（NEEDS-USER 有 OPEN 就開 Fable 決策輪，否則開 Opus 實作輪），清理、留一行摘要、再開下一輪；要人決定或上下文超標時推手機通知並停下 |
 
-所有執行檔（輪次啟動器、兩個 prompt、上下文計算、版本）都在 `skills/autoloop/assets/`，安裝後住在 `~/.claude/skills/autoloop/assets/`。repo 裡只有那支 stub，它把呼叫轉給安裝目錄，內容永遠不變，只帶一個 major 號；`/autoloop run` 開場比對 stub 的 major 和 skill 的 major，不符就要求重跑 `/autoloop init`。
+所有執行檔（輪次啟動器、兩個 prompt、上下文計算、版本）都在 `skills/autoloop/assets/`。skill 可以裝在使用者層（`~/.claude/skills/`，`npx skills add -g`）或 repo 層（`<repo>/.claude/skills/`，不加 `-g`），stub 兩邊都會找。repo 裡只有那支 stub，它把呼叫轉給安裝目錄，帶著裝它時的版號；`/autoloop run` 開場要求 stub 版號和 skill 的 `VERSION` 完全相同，不符就只提示重跑 `/autoloop init`，不自動改。
 
 前提與限制：
 - macOS 或 Linux（原生 Windows 不支援，請用 WSL）；需要 `jq`、`lsof`、`perl`。
@@ -51,7 +51,7 @@ install.sh                  複製到 ~/.claude/skills/
 ## 改動與升版
 
 - 日常改動在 `dev` 分支。改了 `skills/` 任何檔，就在 `changes/` 放一個 `<slug>.md`，檔頭 `type: patch|minor|major`，接一行說明（`tools/check.sh` 會要求）。只改文件、tests、tools 不需要。
-- 版本是 semver，單一來源 `skills/autoloop/assets/VERSION`：**patch** 修復、**minor** 功能、**major** 不相容（stub 範本或對既有 repo 的流程變了，repo 要重跑 `/autoloop init`；`release.sh` 會強制）。
+- 版本是 semver，單一來源 `skills/autoloop/assets/VERSION`：**patch** 修復、**minor** 功能、**major** 不相容。
 - 發布：在 `dev` 跑 `tools/release.sh`，它取最高的 type 升版、合併 `changes/` 進 CHANGELOG、commit、打 tag `autoloop-vX.Y.Z`、fast-forward `main`；然後 `git push origin dev main --follow-tags`。發布前依 `tests/loop/CASES.md` 跑一遍測試床。**main 永遠是已發布狀態**，CI 會擋 main 上殘留的 change 檔。
-- 使用者更新：任何版本都只要重新安裝；major 另外在每個 repo 重跑 `/autoloop init`。
+- 使用者更新：重新安裝，然後在每個 repo 重跑 `/autoloop init`（任何版本都要，stub 版號必須完全相同）。
 - CI（GitHub Actions）每次 push 跑 `tools/check.sh`。

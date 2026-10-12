@@ -22,7 +22,7 @@ A=skills/autoloop/assets
 V=$(cat $A/VERSION)
 echo "autoloop version: $V"
 echo "$V" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$' || { echo "FAIL: $A/VERSION '$V' is not X.Y.Z"; fail=1; }
-grep -q 'autoloop stub (major @MAJOR@)' $A/run-round-stub.sh || { echo "FAIL: $A/run-round-stub.sh must keep 'autoloop stub (major @MAJOR@)'"; fail=1; }
+grep -q 'autoloop stub (version @VERSION@)' $A/run-round-stub.sh || { echo "FAIL: $A/run-round-stub.sh must keep 'autoloop stub (version @VERSION@)'"; fail=1; }
 grep -q "^## autoloop $V " CHANGELOG.md || { echo "FAIL: CHANGELOG has no '## autoloop $V' section"; fail=1; }
 
 pending=$(ls changes/*.md 2>/dev/null | grep -v README || true)

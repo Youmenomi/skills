@@ -1,20 +1,10 @@
 # Changelog
 
-## autoloop 2.0.0 — 2026-10-12 (major)
+## autoloop 0.0.0 — 開發中，尚未發布
 
-- (major) loop-init 與 loop-run 合併為單一 skill `autoloop`（`/autoloop init`、`/autoloop run`）；執行檔全部住在 skill 的 assets/，移除 `~/.claude/loop/` 執行期副本；repo 裡的 `scripts/harness/run-round.sh` 改成永不改變的兩行 stub（只帶 major），版本核對只比 stub 的 major；tag 改為 `autoloop-vX.Y.Z`。既有 repo 需重跑 `/autoloop init`
+目前 main 與 dev 上的內容都是 1.0.0 之前的開發版，沒有相容性承諾。1.0.0 之前做過並驗證過的事：
 
-
-## autoloop 1.1.0 — 2026-10-12 (minor)
-
-- (patch) loop-run：NEEDS-USER 的 OPEN 偵測改為不依賴標題格式（同時支援 `### … — OPEN — AUTH` 與 `## … — OPEN · AUTH · blocks:` 等寫法），避免在不同 repo 誤開實作輪
-- (minor) 版本改為 semver：loop-run 開場比對 skill 與共用層版本並自動同步 `~/.claude/loop/`，只對 repo 的 run-round.sh 比 major；minor／patch 發布後不再需要重跑 /loop-init
-
-
-## autoloop 1.0.0 — 2026-10-12 (initial)
-
-第一版。`loop-init`（建 harness、裝執行器、瘦身指令檔、維護 `~/.claude/loop/`）與 `loop-run`（主 session 迴圈、Fable 決策輪／Opus 實作輪、通知與停止規則、版本核對）。
-
-版本機制：單一來源 `assets/VERSION`，`run-round.sh` 以 `@VERSION@` 佔位、`/loop-init` 安裝時填入，`loop-run` 自有 `VERSION` 檔；`changes/` + `tools/release.sh` 負責升版，`tools/check.sh` 要求 skills 改動必附 change 檔，GitHub Actions 跑 check。
-
-在 `tests/loop/harness` 驗證過的情境：正常實作輪、殘留程序清理、逾時整組殺、Fable 決策輪（TECH 自決／AUTH 留 OPEN）、STOP 檔、並行拒絕、RESOLVED→APPLIED、背景輪結束喚醒主 session、TaskStop 中斷、上下文百分比、手機推播。在正式 repo（threejs-character）跑了 9 輪。
+- 架構：主 session 當迴圈（`/autoloop run`），每輪由 repo 的 stub 啟動安裝目錄裡的 `run-round.sh`，開一個獨立的 `claude -p` 工作者（NEEDS-USER 有 OPEN → Fable 決策輪，否則 Opus 實作輪）；工作者有自己的程序群組、逾時、殘留清理；需要人決定或主 session 上下文超過 30% 時推手機通知並停下。
+- `/autoloop init`：新 repo 建 harness；已有 harness 的瘦身指令檔；裝 stub、允許規則、ignore；從 1.x（loop-init／loop-run）升級時清掉過時內容。
+- 在 `tests/loop/harness` 驗證過：正常輪、殘留清理、逾時整組殺、Fable 決策輪（TECH 自決／AUTH 留 OPEN）、STOP、並行拒絕、RESOLVED→APPLIED、背景輪喚醒主 session、TaskStop 中斷、上下文百分比、手機推播。正式 repo（threejs-character）跑了 9 輪。
+- 版本機制：semver，單一來源 `skills/autoloop/assets/VERSION`；`changes/` + `tools/release.sh`；main 永遠是已發布狀態；`/autoloop run` 比對 repo stub 的完整版號，不符就要求重跑 `/autoloop init`。

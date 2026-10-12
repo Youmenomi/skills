@@ -9,7 +9,7 @@ description: 自動開發 loop，一個 skill 兩個子指令。`/autoloop init`
 - `/autoloop run`：在已 init 的 repo 啟動或接續 loop。
 - 沒給子指令：看 repo 有沒有 `scripts/harness/run-round.sh`，沒有就當 `init`，有就當 `run`，並說一句你選了哪個。
 
-本 skill 的所有執行檔都在安裝目錄的 `assets/`（下文寫作 `$A`，即 `~/.claude/skills/autoloop/assets`）：`run-round.sh`（輪次啟動器）、`run-round-stub.sh`（裝進 repo 的 stub 範本）、`decide.md`（Fable 決策輪 prompt）、`implement.md`（Opus 實作輪 prompt）、`ctx-usage.sh`、`VERSION`（semver）。repo 裡只有 `scripts/harness/run-round.sh` 這支 stub，它把呼叫轉給 `$A/run-round.sh`，內容永遠不變，只帶一個 major 號。
+本 skill 的所有執行檔都在安裝目錄的 `assets/`，下文寫作 `$A`。skill 可以裝在 repo 層或使用者層，所以 `$A` 要用找的：先 `<repo>/.claude/skills/autoloop/assets`，沒有再 `~/.claude/skills/autoloop/assets`（開場用 `ls` 確認哪個存在，之後都用它）。內容：`run-round.sh`（輪次啟動器）、`run-round-stub.sh`（裝進 repo 的 stub 範本）、`decide.md`（Fable 決策輪 prompt）、`implement.md`（Opus 實作輪 prompt）、`ctx-usage.sh`、`VERSION`（semver）。repo 裡只有 `scripts/harness/run-round.sh` 這支 stub，它用同樣的順序找到 `run-round.sh` 並轉交呼叫；stub 帶著裝它時的完整版號，`/autoloop run` 要求它和 `$A/VERSION` **完全相同**，不同就只提示重跑 `/autoloop init`，不自動改。
 
 原則：狀態在 repo 不在對話；一輪一個切片，做完就結束；驗收狀態只有一個來源；需要人決定的事寫進檔案等人，不硬做。**決策政策（TECH／AUTH 分類、例外、supervisor 寫入流程）只存在 `$A/decide.md`，指令檔不抄全文**，只放 repo 專屬的補充。
 
@@ -25,7 +25,8 @@ description: 自動開發 loop，一個 skill 兩個子指令。`/autoloop init`
 4. 判斷模式：
    - **新 repo**：沒有指令檔的 loop 協定、沒有 `docs/progress/PLAN.md` → 走「建立 harness」再「裝 stub」。
    - **已有 harness**：有協定與進度檔 → 走「瘦身指令檔」再「裝 stub」。
-   - **已 init 過**：`scripts/harness/run-round.sh` 已存在 → 若它不是 stub（例如含 `loop-version:` 的舊版完整腳本）或 major 比本 skill 舊，就換成新 stub；指令檔有舊段落就瘦身；其餘不動。
+   - **已 init 過**：`scripts/harness/run-round.sh` 已存在 → stub 版號和 `$A/VERSION` 不同就換成新 stub；指令檔有舊段落就瘦身；其餘不動。
+   - **從 1.x（loop-init／loop-run 時代）升級**：除了換 stub，逐一清掉過時內容，列給使用者看後一次 `docs:`／`chore:` commit：`scripts/harness/run-round.sh` 若是含 `loop-version:` 的完整腳本 → 換 stub；指令檔、STATUS、NEEDS-USER 裡的 `/loop-run`、`/loop-init`、`~/.claude/loop/decide.md` 字樣 → 改成 `/autoloop run`、`/autoloop init`、「autoloop 的 `decide.md`」；repo 根目錄殘留的 `.loop-main.json` → 刪；`.claude/settings.json` 的允許規則維持 `Bash(scripts/harness/run-round.sh *)` 不變；`logs/loop/` 的舊 log 留著不管。用 `grep -rn 'loop-run\|loop-init\|\.claude/loop' --include='*.md' --include='*.json' .` 掃一遍確認沒漏。
 5. 新 repo 時先盤點：建置／測試／lint 指令、既有指令檔（CLAUDE.md 或 AGENTS.md，兩者只能留一個，有 CLAUDE.md 時 AGENTS.md 不會被讀）、測試工具、既有進度文件與大小、gates 會不會啟動長駐子程序。然後一次問使用者三件事：指令檔用哪個檔名；哪些檢查每切片必跑、哪些 milestone 才跑、哪些定期跑；允不允許 push，以及這個 repo **額外**要問人的動作（`decide.md` 已涵蓋刪已追蹤檔、遠端操作、放寬 gate、改驗收或方向、改 PLAN 順序、改寫 history、付費、核准 ADR）。
 
 ## 建立 harness（新 repo）
@@ -59,7 +60,7 @@ description: 自動開發 loop，一個 skill 兩個子指令。`/autoloop init`
 
 ## 裝 stub
 
-1. `mkdir -p scripts/harness && sed "s/@MAJOR@/$(cut -d. -f1 $A/VERSION)/" $A/run-round-stub.sh > scripts/harness/run-round.sh && chmod +x scripts/harness/run-round.sh`。路徑固定，不管 repo 其他腳本放哪；`/autoloop run` 只認這個路徑。
+1. `mkdir -p scripts/harness && sed "s/@VERSION@/$(cat $A/VERSION)/" $A/run-round-stub.sh > scripts/harness/run-round.sh && chmod +x scripts/harness/run-round.sh`。路徑固定，不管 repo 其他腳本放哪；`/autoloop run` 只認這個路徑。
 2. `.gitignore` 確保有 `STOP`、`.loop.lock`、`.loop-round.pid`、`.loop-main.json`、`logs/`（沿用檔內既有的寫法，例如前導 `/`）。
 3. `.claude/settings.json`：`permissions.allow` 加 `"Bash(scripts/harness/run-round.sh *)"`；新 repo 另加 `"effortLevel": "high"`、deny `git push`、只預先允許明確列出的安全指令。已有內容就合併，不動其他鍵。
 4. 看 gates 用到的長駐程序是否在 `run-round.sh` 的 `SWEEP_PATTERN`（vite、node、npm、blender、cargo、playwright、chrom*、python、tail…）裡；不在就建議在 `env` 設 `LOOP_SWEEP_PATTERN`。用最近幾個切片記錄的實際耗時估 `LOOP_TIMEOUT`（最長一輪的兩倍）與 `LOOP_BUDGET`。
@@ -86,7 +87,7 @@ description: 自動開發 loop，一個 skill 兩個子指令。`/autoloop init`
 
 ## 開場（每次呼叫都做一次）
 
-0. 版本核對：`S=$(cat $A/VERSION)`；`R=$(grep -m1 'autoloop stub' scripts/harness/run-round.sh | grep -oE 'major [0-9]+' | awk '{print $2}')`。`R` 讀不到，或和 `S` 的 major（`cut -d. -f1`）不同 → **不啟動**，告訴使用者「repo 的 stub 是 major R，skill 是 S，請先跑 `/autoloop init`」並結束。
+0. 版本核對：`S=$(cat $A/VERSION)`；`R=$(grep -m1 'autoloop stub' scripts/harness/run-round.sh | grep -oE 'version [0-9.]+' | awk '{print $2}')`。`R` 讀不到，或和 `S` **不完全相同**（patch 不同也算）→ **不啟動**，只告訴使用者「repo 的 stub 是 R，skill 是 S，請先跑 `/autoloop init`」並結束。不要自己改 stub、不要降級處理。
 1. 確認在 repo 根目錄：有 `AGENTS.md` 或 `CLAUDE.md`，且 `scripts/harness/run-round.sh` 存在。缺任何一個 → 告訴使用者先跑 `/autoloop init`，結束。
 2. 讀 `.loop-main.json`（可能不存在）。若 `sessionId` 不是自己（用 `get_session self` 取得）而且 `updatedAt` 在 **15 分鐘內** → 另一個主 session 可能還在跑。用 AskUserQuestion 問使用者要不要接手；要接手就 `touch STOP`、等 `.loop-round.pid` 消失（最多 40 分鐘，每 30 秒看一次）、`rm -f STOP`，再繼續；不接手就結束。
 3. `get_session self` 看模型與強度。不是 Sonnet 5.5 / medium 就記住：之後**每輪摘要**加一句「主 session 目前 <模型>/<強度>，建議 Sonnet 5.5 / medium，請在模型選單切換」。只提醒，不阻擋（session 不能改自己的模型）。
