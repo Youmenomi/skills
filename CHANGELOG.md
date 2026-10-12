@@ -1,6 +1,6 @@
 # Changelog
 
-## loop-version 1 — 2026-10-12
+## loop-version 1.0.0 — 2026-10-12 (initial)
 
 第一版。`loop-init`（建 harness、裝執行器、瘦身指令檔、維護 `~/.claude/loop/`）與 `loop-run`（主 session 迴圈、Fable 決策輪／Opus 實作輪、通知與停止規則、版本核對）。
 

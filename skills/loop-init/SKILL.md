@@ -5,7 +5,8 @@ description: 把一個 repo 準備成能用 /loop-run 自動開發的狀態：�
 
 # 版本
 
-loop-version 的單一來源是本 skill 的 `assets/VERSION`（安裝後是 `~/.claude/skills/loop-init/assets/VERSION`）。本 skill 負責把它帶到另外三處：`~/.claude/loop/VERSION`、`~/.claude/loop/run-round.sh` 與 repo 的 `scripts/harness/run-round.sh`（assets 原版的第二行是 `# loop-version: @VERSION@`，複製時用 `sed "s/@VERSION@/<數字>/"` 填入）。`loop-run` 的版本檔由 skills repo 的 release 腳本同步，本 skill 不碰。`loop-run` 看到任一處不符就不會啟動，所以更新 skill 後**一定要在每個 repo 重跑 `/loop-init`**。
+loop-version 的單一來源是本 skill 的 `assets/VERSION`（安裝後是 `~/.claude/skills/loop-init/assets/VERSION`），semver `X.Y.Z`：patch 修復、minor 功能、major 不相容。本 skill 負責把它帶到另外三處：`~/.claude/loop/VERSION`、`~/.claude/loop/run-round.sh` 與 repo 的 `scripts/harness/run-round.sh`（assets 原版的第二行是 `# loop-version: @VERSION@`，複製時用 `sed "s/@VERSION@/<X.Y.Z>/"` 填入）。`loop-run` 的版本檔由 skills repo 的 release 腳本同步，本 skill 不碰。
+`loop-run` 自己會在共用層版本落後時從 assets 同步，所以 **minor／patch 發布後不需要重跑本 skill**；只有 **major**（`run-round.sh` 變了）才要在每個 repo 重跑 `/loop-init`，`loop-run` 看到 repo 副本的 major 不符就不會啟動。
 
 # 原則
 

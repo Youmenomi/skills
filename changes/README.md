@@ -1,10 +1,18 @@
 # changes/
 
-改了 `skills/loop-init/` 或 `skills/loop-run/` 任何東西，就在這裡放一個 `<slug>.md`，內容一行，說改了什麼（給 CHANGELOG 用）。`tools/check.sh` 看到 skills 有改動但這裡沒有檔就會 FAIL。
+改了 `skills/loop-init/` 或 `skills/loop-run/` 任何東西，就在這裡放一個 `<slug>.md`：檔頭宣告類型，接著一行說明（進 CHANGELOG）。
 
-發布時跑 `tools/release.sh`：它把這裡的檔合併進 CHANGELOG 的新段落、版本 +1、同步到 `skills/loop-run/VERSION`、刪掉這些檔、commit、打 tag。之後 `git push --follow-tags`，並在每個 repo 重跑 `/loop-init`。
-
-例：`changes/sweep-pattern-cargo.md`
-```
+```markdown
+---
+type: patch
+---
 run-round.sh 的 SWEEP_PATTERN 加入 cargo 與 rustc
 ```
+
+| type | 意思 | 發布後使用者要做的 |
+|---|---|---|
+| `patch` | 修復，行為更正 | 重新安裝 |
+| `minor` | 新功能，向後相容 | 重新安裝 |
+| `major` | 不相容：`run-round.sh` 變了（repo 裡有副本）、或流程對既有 repo 不相容 | 重新安裝 + 每個 repo 重跑 `/loop-init` |
+
+規則：日常改動在 `dev` 分支；`tools/check.sh` 看到 skills 有改動但這裡沒有檔就 FAIL；main 上這裡必須是空的。發布跑 `tools/release.sh`（取最高的 type 升版、合併進 CHANGELOG、刪掉這些檔、commit、tag、fast-forward main），然後 `git push origin dev main --follow-tags`。

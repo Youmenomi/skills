@@ -45,7 +45,8 @@ install.sh                  複製到 ~/.claude/skills/
 
 ## 改動與升版
 
-- 改了 `skills/loop-init/` 或 `skills/loop-run/` 任何檔：在 `changes/` 放一個一行的 `<slug>.md` 說明改了什麼（`tools/check.sh` 會要求）。
-- 發布：`tools/release.sh` 把 `changes/` 合併進 CHANGELOG、版本 +1（單一來源 `skills/loop-init/assets/VERSION`，同步到 `skills/loop-run/VERSION`）、commit、打 tag `loop-v<N>`；然後 `git push --follow-tags`。發布前依 `tests/loop/CASES.md` 跑一遍測試床。
-- `run-round.sh` 原版第二行是 `# loop-version: @VERSION@`，`/loop-init` 安裝時填入數字；`/loop-run` 開場核對 skill、`~/.claude/loop/`、repo 三處版本，不符就要求重跑 `/loop-init`。
+- 日常改動在 `dev` 分支。改了 `skills/loop-init/` 或 `skills/loop-run/` 任何檔，就在 `changes/` 放一個 `<slug>.md`，檔頭 `type: patch|minor|major`，接一行說明（`tools/check.sh` 會要求）。只改文件、tests、tools 不需要。
+- 版本是 semver，單一來源 `skills/loop-init/assets/VERSION`：**patch** 修復、**minor** 功能、**major** 不相容（`run-round.sh` 變了，repo 裡的副本過期；`release.sh` 會強制）。
+- 發布：在 `dev` 跑 `tools/release.sh`，它取最高的 type 升版、合併 `changes/` 進 CHANGELOG、commit、打 tag `loop-vX.Y.Z`、fast-forward `main`；然後 `git push origin dev main --follow-tags`。發布前依 `tests/loop/CASES.md` 跑一遍測試床。**main 永遠是已發布狀態**，CI 會擋 main 上殘留的 change 檔。
+- 使用者更新：minor／patch 只要重新安裝（`/loop-run` 開場會自己同步 `~/.claude/loop/`）；major 要重新安裝並在每個 repo 重跑 `/loop-init`（`/loop-run` 比對 repo 副本的 major，不符就不啟動）。
 - CI（GitHub Actions）每次 push 跑 `tools/check.sh`。

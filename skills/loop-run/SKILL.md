@@ -13,12 +13,14 @@ description: 在已初始化（/loop-init）的 repo 啟動或接續自動開發
 
 # 版本
 
-本 skill 的版本寫在**和本檔同目錄的 `VERSION` 檔**（安裝後是 `~/.claude/skills/loop-run/VERSION`），不寫在本文裡。整套（loop-init、loop-run、`~/.claude/loop/` 四個檔、repo 的 `run-round.sh`）共用一個 loop-version，由 skills repo 的 `tools/release.sh` 統一升版。
+本 skill 的版本寫在**和本檔同目錄的 `VERSION` 檔**（安裝後是 `~/.claude/skills/loop-run/VERSION`），semver `X.Y.Z`，不寫在本文裡。整套（loop-init、loop-run、`~/.claude/loop/` 幾個檔、repo 的 `run-round.sh`）共用一個 loop-version，由 skills repo 的 `tools/release.sh` 統一升版：patch 修復、minor 功能、major 不相容（`run-round.sh` 變了，repo 裡的副本過期）。
 
 # 開場（每次呼叫本 skill 都做一次）
 
-0. 版本核對，三個數字必須相同，否則**不啟動**，告訴使用者「版本不符，請先跑 `/loop-init` 更新」並結束：
-   `cat ~/.claude/skills/loop-run/VERSION`（本 skill）；`cat ~/.claude/loop/VERSION`（共用層）；`grep -m1 'loop-version:' scripts/harness/run-round.sh`（repo）。任何一個讀不到也算不符。
+0. 版本核對（三處）：
+   - `S=$(cat ~/.claude/skills/loop-run/VERSION)`、`A=$(cat ~/.claude/skills/loop-init/assets/VERSION)`：兩者必須相同，否則是安裝壞了，告訴使用者重新安裝（`./install.sh` 或 `npx skills add …`），結束。
+   - `L=$(cat ~/.claude/loop/VERSION 2>/dev/null)`：和 `S` 不同（或不存在）就**自己同步共用層**：`mkdir -p ~/.claude/loop && cp ~/.claude/skills/loop-init/assets/* ~/.claude/loop/ && sed -i '' "s/@VERSION@/$S/" ~/.claude/loop/run-round.sh`，摘要裡說一句「共用層已更新到 S」。這是 minor／patch 發布後唯一需要的動作，不用人跑 `/loop-init`。
+   - `R=$(grep -m1 'loop-version:' scripts/harness/run-round.sh | sed 's/.*: *//')`：只比 **major**（`cut -d. -f1`）。和 `S` 的 major 不同（或讀不到）就**不啟動**，告訴使用者「run-round.sh 版本 R 與 skill S 不相容，請先跑 `/loop-init`」並結束。
 1. 確認在 repo 根目錄：有 `AGENTS.md` 或 `CLAUDE.md`，且 `scripts/harness/run-round.sh` 存在。缺任何一個 → 告訴使用者先跑 `/loop-init`，結束。
 2. 讀 `.loop-main.json`（可能不存在）。若 `sessionId` 不是自己（用 `get_session self` 取得）而且 `updatedAt` 在 **15 分鐘內** → 另一個主 session 可能還在跑。用 AskUserQuestion 問使用者要不要接手；要接手就 `touch STOP`、等 `.loop-round.pid` 消失（最多 40 分鐘，每 30 秒看一次）、`rm -f STOP`，再繼續；不接手就結束。
 3. `get_session self` 看模型與強度。不是 Sonnet 5.5 / medium 就記住：之後**每輪摘要**加一句「主 session 目前 <模型>/<強度>，建議 Sonnet 5.5 / medium，請在模型選單切換」。只提醒，不阻擋（session 不能改自己的模型）。
