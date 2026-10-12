@@ -40,7 +40,10 @@ elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
       echo "FAIL: $CHECK_RANGE changes skills/loop-* without a changes/ file or a release:"; echo "$changed" | sed 's/^/  /'; fail=1
     fi
   elif ! git diff --quiet HEAD -- skills/loop-init skills/loop-run 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard skills/loop-init skills/loop-run)" ]; then
-    [ -n "$pending" ] || { echo "FAIL: skills/loop-* changed but changes/ has no pending file (add changes/<slug>.md with 'type:')"; fail=1; }
+    # a working tree whose VERSION differs from HEAD is release.sh mid-flight: allowed
+    if git diff --quiet HEAD -- skills/loop-init/assets/VERSION 2>/dev/null; then
+      [ -n "$pending" ] || { echo "FAIL: skills/loop-* changed but changes/ has no pending file (add changes/<slug>.md with 'type:')"; fail=1; }
+    fi
   fi
 fi
 
