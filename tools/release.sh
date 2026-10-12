@@ -18,7 +18,7 @@ BR=$(git branch --show-current)
 
 bump=patch
 for f in $pending; do
-  t=$(sed -n 's/^type: *\(patch\|minor\|major\) *$/\1/p' "$f" | head -1)
+  t=$(sed -nE 's/^type: *(patch|minor|major) *$/\1/p' "$f" | head -1)   # -E: BSD sed has no \| in BRE
   [ -n "$t" ] || { echo "FAIL: $f has no 'type: patch|minor|major' frontmatter line"; exit 1; }
   case "$t" in major) bump=major ;; minor) [ "$bump" = major ] || bump=minor ;; esac
 done
@@ -35,7 +35,7 @@ NEW="$MA.$MI.$PA"; DATE=$(date +%F)
   echo "# Changelog"; echo
   echo "## loop-version $NEW — $DATE ($bump)"; echo
   for f in $pending; do
-    t=$(sed -n 's/^type: *\(.*\) *$/\1/p' "$f" | head -1)
+    t=$(sed -nE 's/^type: *(.*) *$/\1/p' "$f" | head -1)
     body=$(awk 'BEGIN{fm=0} /^---$/{fm++; next} fm!=1{print}' "$f" | sed '/^[[:space:]]*$/d' | tr '\n' ' ' | sed 's/ *$//')
     echo "- ($t) $body"
   done
