@@ -5,4 +5,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: bash tools/check.sh
+        with:
+          fetch-depth: 0
+      - name: tools/check.sh
+        env:
+          BEFORE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # First push of a branch has an all-zero "before"; then there is nothing to range-check.
+          if [ -n "$BEFORE" ] && ! echo "$BEFORE" | grep -q '^0*$' && git cat-file -e "$BEFORE" 2>/dev/null; then
+            export CHECK_RANGE="$BEFORE..HEAD"
+          fi
+          bash tools/check.sh

@@ -23,9 +23,18 @@ echo "loop-version: assets=$V loop-run=$RV"
 grep -q '^# loop-version: @VERSION@$' skills/loop-init/assets/run-round.sh || { echo "FAIL: assets/run-round.sh must keep '# loop-version: @VERSION@' on line 2"; fail=1; }
 grep -q "^## loop-version $V " CHANGELOG.md || { echo "FAIL: CHANGELOG has no '## loop-version $V' section"; fail=1; }
 
+# Rule 3: a change to skills/loop-* needs a pending change file, unless the same change
+# bumped the version (that is what release.sh produces).
+#   locally: working tree vs HEAD        in CI: CHECK_RANGE="<before>..HEAD" (set by the workflow)
 pending=$(ls changes/*.md 2>/dev/null | grep -v README || true)
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-  if ! git diff --quiet HEAD -- skills/loop-init skills/loop-run 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard skills/loop-init skills/loop-run)" ]; then
+  if [ -n "${CHECK_RANGE:-}" ]; then
+    changed=$(git diff --name-only "$CHECK_RANGE" -- skills/loop-init skills/loop-run 2>/dev/null || true)
+    bumped=$(git diff --name-only "$CHECK_RANGE" -- skills/loop-init/assets/VERSION 2>/dev/null || true)
+    if [ -n "$changed" ] && [ -z "$pending" ] && [ -z "$bumped" ]; then
+      echo "FAIL: $CHECK_RANGE changes skills/loop-* without a changes/ file or a version bump:"; echo "$changed" | sed 's/^/  /'; fail=1
+    fi
+  elif ! git diff --quiet HEAD -- skills/loop-init skills/loop-run 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard skills/loop-init skills/loop-run)" ]; then
     [ -n "$pending" ] || { echo "FAIL: skills/loop-* changed but changes/ has no pending file (add changes/<slug>.md, one line)"; fail=1; }
   fi
 fi
